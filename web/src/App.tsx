@@ -26,6 +26,7 @@ export default function App() {
   async function createShare(e:React.FormEvent) {
     e.preventDefault(); setBusy(true);setMessage('');setLink('');
     try {
+      if (!API) throw new Error('Backend ещё не подключён. Сейчас опубликован только интерфейс; создание ссылок станет доступно после запуска Go API.');
       const key=randomSecret(); const token=randomSecret(); const cipher=await encrypt(text,key);
       const res=await fetch(API+'/api/shares',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:token,ciphertext:cipher,pin,expiresIn:Number(ttl)})});
       const data=await res.json(); if(!res.ok) throw new Error(data.error||'Не удалось создать ссылку');
@@ -35,6 +36,7 @@ export default function App() {
   async function openShare(e:React.FormEvent) {
     e.preventDefault(); setBusy(true);setMessage('');
     try {
+      if (!API) throw new Error('Backend ещё не подключён. Ссылка пока не может быть открыта: Go API ещё не опубликован.');
       if(!secret || !accessToken) throw new Error('В ссылке отсутствует ключ или токен. Откройте исходную ссылку целиком.');
       const res=await fetch(API+'/api/shares/'+shareId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:accessToken,pin:viewPin})});
       const data=await res.json(); if(!res.ok) throw new Error(data.error||'Ссылка недоступна');
