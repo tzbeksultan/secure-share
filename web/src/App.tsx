@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const API = (import.meta as any).env.VITE_API_URL?.replace(/\/$/, '') || '';\nconst BASE = (import.meta as any).env.BASE_URL || '/';
+const BASE = (import.meta as any).env.BASE_URL || '/';
 const enc = new TextEncoder();
 const b64 = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const unb64 = (s: string) => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
@@ -19,7 +19,7 @@ async function decrypt(value: string, secret: string) {
 export default function App() {
   const [text,setText]=useState(''); const [pin,setPin]=useState(''); const [ttl,setTtl]=useState('1440');
   const [busy,setBusy]=useState(false); const [message,setMessage]=useState(''); const [link,setLink]=useState('');
-  const [opened,setOpened]=useState(false); const [content,setContent]=useState(''); const [viewPin,setViewPin]=useState('');
+  useEffect(()=>{ const match=location.pathname.match(/^\/secure-share\/s\/([\w-]+)$/); if(match){setShareId(match[1]);const parts=location.hash.slice(1).split('.');setSecret(parts[0]||'');setAccessToken(parts[1]||'');} },[]);
   const [shareId,setShareId]=useState(''); const [secret,setSecret]=useState(''); const [accessToken,setAccessToken]=useState('');
   useEffect(()=>{ const match=location.pathname.match(new RegExp('^' + BASE.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\location.pathname.match(/^\/s\/([\w-]+)$/)') + 's/([\\w-]+); if(match){setShareId(match[1]);const parts=location.hash.slice(1).split('.');setSecret(parts[0]||'');setAccessToken(parts[1]||'');} },[]);
   const isViewer=Boolean(shareId);
@@ -60,7 +60,7 @@ export default function App() {
       const key=randomSecret(); const token=randomSecret(); const cipher=await encrypt(text,key);
       const res=await fetch(API+'/api/shares',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:token,ciphertext:cipher,pin,expiresIn:Number(ttl)})});
       const data=await res.json(); if(!res.ok) throw new Error(data.error||'Не удалось создать ссылку');
-      const url=location.origin+'/s/'+data.id+'#'+key+'.'+token; setLink(url); setMessage('Готово. Секрет зашифрован в браузере.');
+      const url=location.origin+BASE+'s/'+data.id+'#'+key+'.'+token; setLink(url); setMessage('Готово. Секрет зашифрован в браузере.');
     } catch(err:any){setMessage(err.message||'Ошибка сети');} finally{setBusy(false);}
   }
   async function openShare(e:React.FormEvent) {
