@@ -34,7 +34,7 @@ cd backend
 go run .
 ```
 
-The API listens on `http://localhost:8080` by default. Set `PORT` to change it.
+The API listens on `http://localhost:8080` by default. Set `PORT` to change it. The UI limits original files to 10 MiB; the API allows 16 MiB of decoded encrypted payload to account for base64 and JSON overhead.
 
 ### Frontend
 
