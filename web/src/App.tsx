@@ -46,6 +46,7 @@ export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [fileDelivery, setFileDelivery] = useState<'download' | 'view'>('download');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [protectedHidden, setProtectedHidden] = useState(false);
   const [pin, setPin] = useState('');
   const [ttl, setTtl] = useState('1440');
   const [busy, setBusy] = useState(false);
@@ -71,6 +72,43 @@ export default function App() {
   }, []);
 
   const isViewer = Boolean(shareId);
+
+  // Best-effort privacy shield: conceal the rendered secret when the tab/app loses visibility.
+  useEffect(() => {
+    if (!opened) return;
+    const conceal = () => setProtectedHidden(true);
+    const reveal = () => setProtectedHidden(false);
+    const onVisibility = () => document.visibilityState === 'hidden' ? conceal() : reveal();
+    window.addEventListener('blur', conceal);
+    window.addEventListener('focus', reveal);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', conceal);
+    window.addEventListener('pageshow', reveal);
+    return () => {
+      window.removeEventListener('blur', conceal);
+      window.removeEventListener('focus', reveal);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', conceal);
+      window.removeEventListener('pageshow', reveal);
+    };
+  }, [opened]);
+
+  useEffect(() => {
+    if (!opened || !content || content.kind !== 'file' || content.delivery !== 'view') return;
+    const block = (event: Event) => event.preventDefault();
+    document.addEventListener('contextmenu', block);
+    document.addEventListener('selectstart', block);
+    document.addEventListener('dragstart', block);
+    document.addEventListener('copy', block);
+    document.addEventListener('cut', block);
+    return () => {
+      document.removeEventListener('contextmenu', block);
+      document.removeEventListener('selectstart', block);
+      document.removeEventListener('dragstart', block);
+      document.removeEventListener('copy', block);
+      document.removeEventListener('cut', block);
+    };
+  }, [opened, content]);
 
   useEffect(() => {
     if (!opened || content?.kind !== 'file' || content.delivery !== 'view') {
@@ -229,15 +267,35 @@ export default function App() {
               <div className="secret">
                 <strong>{content.name}</strong>
                 <p className="notice">Файл расшифрован в браузере · {content.mime || 'Неизвестный тип'}</p>
-                {content.delivery === 'view' && previewUrl && content.mime.startsWith('image/') ? (
-                  <img src={previewUrl} alt={content.name} style={{ display: 'block', maxWidth: '100%', maxHeight: '65vh', margin: '16px auto', objectFit: 'contain' }} />
-                ) : content.delivery === 'view' && previewUrl && content.mime === 'application/pdf' ? (
-                  <iframe title={content.name} src={previewUrl} style={{ width: '100%', height: '65vh', border: 0, marginTop: 16, background: '#fff' }} />
+                {content.delivery === 'view' ? (
+                  <div
+                    className="protected-stage"
+                    onContextMenu={event => event.preventDefault()}
+                    onDragStart={event => event.preventDefault()}
+                    style={{ position: 'relative', overflow: 'hidden', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}
+                  >
+                    {previewUrl && content.mime.startsWith('image/') ? (
+                      <img src={previewUrl} alt={content.name} draggable={false} style={{ display: 'block', maxWidth: '100%', maxHeight: '65vh', margin: '16px auto', objectFit: 'contain', pointerEvents: 'none' }} />
+                    ) : previewUrl && content.mime === 'application/pdf' ? (
+                      <iframe title={content.name} src={previewUrl} style={{ width: '100%', height: '65vh', border: 0, marginTop: 16, background: '#fff' }} />
+                    ) : (
+                      <p className="notice">Этот формат не поддерживает встроенный просмотр в браузере. Для него доступно только скачивание.</p>
+                    )}
+                    {!protectedHidden && (
+                      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: 'repeat(4, 1fr)', overflow: 'hidden' }}>
+                        {Array.from({ length: 8 }, (_, index) => (
+                          <span key={index} style={{ alignSelf: 'center', justifySelf: 'center', transform: 'rotate(-28deg)', color: 'rgba(12, 35, 29, .42)', background: 'rgba(255,255,255,.16)', fontSize: 11, fontWeight: 800, letterSpacing: 1, padding: '5px 8px', whiteSpace: 'nowrap' }}>SECURE SHARE · ONE-TIME</span>
+                        ))}
+                      </div>
+                    )}
+                    {protectedHidden && (
+                      <div style={{ position: 'absolute', inset: 0, zIndex: 2, display: 'grid', placeItems: 'center', background: '#090d18', color: '#7ce0bf', textAlign: 'center', padding: 24 }}>
+                        <div><strong>Просмотр скрыт</strong><p style={{ color: '#aab4c5', fontSize: 12 }}>Вернись на страницу, чтобы продолжить.</p></div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  <>
-                    {content.delivery === 'view' && <p className="notice">Этот формат не поддерживает встроенный просмотр в браузере. Можно скачать файл.</p>}
-                    <button type="button" onClick={() => downloadFile(content)}>Скачать файл ↓</button>
-                  </>
+                  <button type="button" onClick={() => downloadFile(content)}>Скачать файл ↓</button>
                 )}
               </div>
             ) : null}
