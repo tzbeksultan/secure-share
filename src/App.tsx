@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDownToLine, Check, Clock3, Copy, FileImage, FileText, KeyRound, Link2, LockKeyhole, ShieldCheck, Sparkles, Upload, X } from 'lucide-react'
+import { ArrowDownToLine, Check, Clock3, Copy, FileImage, FileText, KeyRound, LockKeyhole, ShieldCheck, Sparkles, Upload, X } from 'lucide-react'
 
 type Expiry = 300 | 3600 | 86400
 type Payload = { kind: 'text'; text: string } | { kind: 'file'; name: string; mime: string; data: string }
