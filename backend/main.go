@@ -57,7 +57,7 @@ func (s *Store) create(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, errorResponse{Error: "method not allowed"})
 		return
 	}
-	maxBytes := int64(10 << 20)
+	maxBytes := int64(16 << 20)
 	if raw := os.Getenv("MAX_UPLOAD_BYTES"); raw != "" {
 		if n, err := strconv.ParseInt(raw, 10, 64); err == nil && n > 0 {
 			maxBytes = n
