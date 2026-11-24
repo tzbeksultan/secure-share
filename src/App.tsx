@@ -51,8 +51,8 @@ export default function App() {
   const [loadingReceived, setLoadingReceived] = useState(false)
   const [blurred, setBlurred] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const viewerStarted = useRef(false)
 
-  const hash = window.location.hash
   const isViewer = window.location.pathname.startsWith('/s/')
 
   useEffect(() => {
@@ -67,9 +67,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!isViewer) return
+    if (!isViewer || viewerStarted.current) return
+    viewerStarted.current = true
     const id = window.location.pathname.split('/').pop()
-    const key = new URLSearchParams(hash.slice(1)).get('key')
+    const key = new URLSearchParams(window.location.hash.slice(1)).get('key')
     if (!id || !key) {
       setReceivedError('Ссылка неполная: отсутствует ключ шифрования.')
       return
@@ -86,7 +87,7 @@ export default function App() {
       .then(setReceived)
       .catch(err => setReceivedError(err instanceof Error ? err.message : 'Не удалось открыть секрет.'))
       .finally(() => setLoadingReceived(false))
-  }, [isViewer, hash])
+  }, [isViewer]
 
   async function createShare() {
     setError('')
@@ -156,7 +157,7 @@ export default function App() {
             <h1>Секрет открыт</h1>
             <p className="muted">Эта ссылка уже использована и повторно не откроется.</p>
             {received.kind === 'text' ? <pre className="secret-text">{received.text}</pre> :
-              <div className="file-result"><FileText size={22}/><div><strong>{received.name}</strong><small>Файл расшифрован в браузере</small></div><button className="button primary" onClick={() => downloadFile(received)}><ArrowDownToLine size={16}/> Скачать</button></div>}
+              <div className="file-result"><FileText size={22}/><div><strong>{received.name}</strong><small>Файл расшифрован в браузере</small></div><button className="button primary" onClick={() => downloadFile(received as Extract<Payload, { kind: 'file' }>)}><ArrowDownToLine size={16}/> Скачать</button></div>}
             <div className="notice"><ShieldCheck size={16}/> Не пересылайте содержимое посторонним. Скриншоты невозможно полностью запретить в браузере.</div>
           </div> : null}
       </section>
