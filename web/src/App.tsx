@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const BASE = (import.meta as any).env.BASE_URL || '/';
+const API = (import.meta as any).env.VITE_API_URL?.replace(/\/$/, '') || '';\nconst BASE = (import.meta as any).env.BASE_URL || '/';
 const enc = new TextEncoder();
 const b64 = (b: Uint8Array) => btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const unb64 = (s: string) => Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
