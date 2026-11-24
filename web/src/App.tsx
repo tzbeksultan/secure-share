@@ -19,9 +19,8 @@ async function decrypt(value: string, secret: string) {
 export default function App() {
   const [text,setText]=useState(''); const [pin,setPin]=useState(''); const [ttl,setTtl]=useState('1440');
   const [busy,setBusy]=useState(false); const [message,setMessage]=useState(''); const [link,setLink]=useState('');
-  useEffect(()=>{ const match=location.pathname.match(/^\/secure-share\/s\/([\w-]+)$/); if(match){setShareId(match[1]);const parts=location.hash.slice(1).split('.');setSecret(parts[0]||'');setAccessToken(parts[1]||'');} },[]);
   const [shareId,setShareId]=useState(''); const [secret,setSecret]=useState(''); const [accessToken,setAccessToken]=useState('');
-  useEffect(()=>{ const match=location.pathname.match(new RegExp('^' + BASE.replace(/[.*+?^${}()|[\\]\\]/g, '\\\\location.pathname.match(/^\/s\/([\w-]+)$/)') + 's/([\\w-]+); if(match){setShareId(match[1]);const parts=location.hash.slice(1).split('.');setSecret(parts[0]||'');setAccessToken(parts[1]||'');} },[]);
+  useEffect(()=>{ const match=location.pathname.match(/^\/secure-share\/s\/([\w-]+)$/); if(match){setShareId(match[1]);const parts=location.hash.slice(1).split('.');setSecret(parts[0]||'');setAccessToken(parts[1]||'');} },[]);
   const isViewer=Boolean(shareId);
   async function createShare(e:React.FormEvent) {
     e.preventDefault(); setBusy(true);setMessage('');setLink('');
