@@ -20,23 +20,23 @@ export default function App() {
   const [text,setText]=useState(''); const [pin,setPin]=useState(''); const [ttl,setTtl]=useState('1440');
   const [busy,setBusy]=useState(false); const [message,setMessage]=useState(''); const [link,setLink]=useState('');
   const [opened,setOpened]=useState(false); const [content,setContent]=useState(''); const [viewPin,setViewPin]=useState('');
-  const [shareId,setShareId]=useState(''); const [secret,setSecret]=useState('');
-  useEffect(()=>{ const match=location.pathname.match(/^\/s\/([\w-]+)$/); if(match){setShareId(match[1]);setSecret(location.hash.slice(1));} },[]);
+  const [shareId,setShareId]=useState(''); const [secret,setSecret]=useState(''); const [accessToken,setAccessToken]=useState('');
+  useEffect(()=>{ const match=location.pathname.match(/^\/s\/([\w-]+)$/); if(match){setShareId(match[1]);const parts=location.hash.slice(1).split('.');setSecret(parts[0]||'');setAccessToken(parts[1]||'');} },[]);
   const isViewer=Boolean(shareId);
   async function createShare(e:React.FormEvent) {
     e.preventDefault(); setBusy(true);setMessage('');setLink('');
     try {
-      const key=randomSecret(); const cipher=await encrypt(text,key);
-      const res=await fetch(API+'/api/shares',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:key,ciphertext:cipher,pin,expiresIn:Number(ttl)})});
+      const key=randomSecret(); const token=randomSecret(); const cipher=await encrypt(text,key);
+      const res=await fetch(API+'/api/shares',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:token,ciphertext:cipher,pin,expiresIn:Number(ttl)})});
       const data=await res.json(); if(!res.ok) throw new Error(data.error||'Не удалось создать ссылку');
-      const url=location.origin+'/s/'+data.id+'#'+key; setLink(url); setMessage('Готово. Секрет зашифрован в браузере.');
+      const url=location.origin+'/s/'+data.id+'#'+key+'.'+token; setLink(url); setMessage('Готово. Секрет зашифрован в браузере.');
     } catch(err:any){setMessage(err.message||'Ошибка сети');} finally{setBusy(false);}
   }
   async function openShare(e:React.FormEvent) {
     e.preventDefault(); setBusy(true);setMessage('');
     try {
-      if(!secret) throw new Error('В ссылке отсутствует ключ расшифровки. Откройте исходную ссылку целиком.');
-      const res=await fetch(API+'/api/shares/'+shareId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret,pin:viewPin})});
+      if(!secret || !accessToken) throw new Error('В ссылке отсутствует ключ или токен. Откройте исходную ссылку целиком.');
+      const res=await fetch(API+'/api/shares/'+shareId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({secret:accessToken,pin:viewPin})});
       const data=await res.json(); if(!res.ok) throw new Error(data.error||'Ссылка недоступна');
       setContent(await decrypt(data.ciphertext,secret));setOpened(true);
     } catch(err:any){setMessage(err.message||'Ошибка сети');} finally{setBusy(false);}
