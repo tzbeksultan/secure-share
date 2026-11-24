@@ -87,7 +87,7 @@ export default function App() {
       .then(setReceived)
       .catch(err => setReceivedError(err instanceof Error ? err.message : 'Не удалось открыть секрет.'))
       .finally(() => setLoadingReceived(false))
-  }, [isViewer]
+  }, [isViewer])
 
   async function createShare() {
     setError('')
