@@ -7,7 +7,7 @@ const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 type Payload =
   | { kind: 'text'; text: string }
-  | { kind: 'file'; name: string; mime: string; data: string };
+  | { kind: 'file'; name: string; mime: string; data: string; delivery: 'download' | 'view' };
 
 const b64 = (bytes: Uint8Array) => {
   let binary = '';
@@ -44,6 +44,8 @@ function formatSize(bytes: number) {
 export default function App() {
   const [text, setText] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [fileDelivery, setFileDelivery] = useState<'download' | 'view'>('download');
+  const [previewUrl, setPreviewUrl] = useState('');
   const [pin, setPin] = useState('');
   const [ttl, setTtl] = useState('1440');
   const [busy, setBusy] = useState(false);
@@ -70,6 +72,17 @@ export default function App() {
 
   const isViewer = Boolean(shareId);
 
+  useEffect(() => {
+    if (!opened || content?.kind !== 'file' || content.delivery !== 'view') {
+      setPreviewUrl('');
+      return;
+    }
+    const blob = new Blob([unb64(content.data)], { type: content.mime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [opened, content]);
+
   async function createShare(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -83,7 +96,7 @@ export default function App() {
       if (file) {
         if (file.size > MAX_FILE_BYTES) throw new Error('Максимальный размер файла — 8 МБ.');
         const data = b64(new Uint8Array(await file.arrayBuffer()));
-        payload = { kind: 'file', name: file.name, mime: file.type || 'application/octet-stream', data };
+        payload = { kind: 'file', name: file.name, mime: file.type || 'application/octet-stream', data, delivery: fileDelivery };
       } else {
         payload = { kind: 'text', text };
       }
@@ -181,7 +194,17 @@ export default function App() {
               onChange={e => { const selected = e.target.files?.[0] || null; setFile(selected); if (selected) setText(''); setMessage(selected && selected.size > MAX_FILE_BYTES ? 'Максимальный размер файла — 8 МБ.' : ''); }}
               style={{ padding: 12, marginBottom: 8 }}
             />
-            {file && <p className="notice">Прикреплён: {file.name} · {formatSize(file.size)} <button type="button" className="copy" onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = ''; }}>Убрать</button></p>}
+            {file && <>
+              <p className="notice">Прикреплён: {file.name} · {formatSize(file.size)} <button type="button" className="copy" onClick={() => { setFile(null); if (fileInput.current) fileInput.current.value = ''; }}>Убрать</button></p>
+              <div style={{ margin: '16px 0' }}>
+                <label>Что должен сделать получатель?</label>
+                <div className="fields">
+                  <button type="button" className={fileDelivery === 'download' ? '' : 'copy'} onClick={() => setFileDelivery('download')}>Скачать файл</button>
+                  <button type="button" className={fileDelivery === 'view' ? '' : 'copy'} onClick={() => setFileDelivery('view')}>Одноразовый просмотр</button>
+                </div>
+                {fileDelivery === 'view' && <p className="notice">Просмотр прямо на странице поддерживается для изображений и PDF. Для остальных форматов браузер может предложить скачать файл.</p>}
+              </div>
+            </>}
             <div className="fields">
               <div><label>PIN-код <small>(необязательно)</small></label><input value={pin} onChange={e => setPin(e.target.value)} placeholder="Минимум 4 символа" minLength={pin ? 4 : undefined} /></div>
               <div><label>Срок действия</label><select value={ttl} onChange={e => setTtl(e.target.value)}><option value="60">1 час</option><option value="1440">24 часа</option><option value="10080">7 дней</option></select></div>
@@ -206,7 +229,16 @@ export default function App() {
               <div className="secret">
                 <strong>{content.name}</strong>
                 <p className="notice">Файл расшифрован в браузере · {content.mime || 'Неизвестный тип'}</p>
-                <button type="button" onClick={() => downloadFile(content)}>Скачать файл ↓</button>
+                {content.delivery === 'view' && previewUrl && content.mime.startsWith('image/') ? (
+                  <img src={previewUrl} alt={content.name} style={{ display: 'block', maxWidth: '100%', maxHeight: '65vh', margin: '16px auto', objectFit: 'contain' }} />
+                ) : content.delivery === 'view' && previewUrl && content.mime === 'application/pdf' ? (
+                  <iframe title={content.name} src={previewUrl} style={{ width: '100%', height: '65vh', border: 0, marginTop: 16, background: '#fff' }} />
+                ) : (
+                  <>
+                    {content.delivery === 'view' && <p className="notice">Этот формат не поддерживает встроенный просмотр в браузере. Можно скачать файл.</p>}
+                    <button type="button" onClick={() => downloadFile(content)}>Скачать файл ↓</button>
+                  </>
+                )}
               </div>
             ) : null}
             <p className="notice">Секрет открыт. Повторно получить его по этой ссылке нельзя.</p>
